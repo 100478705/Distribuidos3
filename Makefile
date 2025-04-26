@@ -1,66 +1,58 @@
-# ──────────────────────────────────────────────────────────────
-#  Makefile – práctica RPC clave-valor
-# ──────────────────────────────────────────────────────────────
-CC      = gcc
-RPCGEN  = rpcgen -M -C          # -M: servidor multihilo, -C: ANSI
-CFLAGS  = -Wall -g -fPIC -pthread \
-          -I. -I/usr/include/tirpc
+CC = gcc
+RPCGEN = rpcgen -M -C
+CFLAGS = -Wall -g -fPIC -pthread -I. -I/usr/include/tirpc
 LDFLAGS = -pthread -ltirpc
 
-# distribución de carpetas
-CLIENT_DIR  = cliente
-SERVER_DIR  = servidor
+CLIENT_DIR = cliente
+SERVER_DIR = servidor
 
-# ---------- fuentes propias ----------
-PROXY_SRC   = proxy-rpc.c
-CLIENT_SRC  = $(CLIENT_DIR)/app-cliente.c
-SERVER_SRC  = $(SERVER_DIR)/servidor-rpc.c $(SERVER_DIR)/claves.c
+RPC_X = rpc.x
+RPC_H = rpc.h
+RPC_CLNT = rpc_clnt.c
+RPC_SVC  = rpc_svc.c
+RPC_XDR  = rpc_xdr.c
 
-# ---------- interfaz RPC -------------
-RPC_X       = rpc.x
-RPC_H       = rpc.h
-RPC_CLNT_C  = rpc_clnt.c
-RPC_SVC_C   = rpc_svc.c
-RPC_XDR_C   = rpc_xdr.c
-
-# ---------- objetos ------------------
-OBJ_PROXY    = $(PROXY_SRC:.c=.o)
-OBJ_CLIENTE  = $(CLIENT_SRC:.c=.o)
-OBJ_SERVER   = $(SERVER_SRC:.c=.o)
-OBJ_CLNT_STB = $(RPC_CLNT_C:.c=.o)
-OBJ_SVC_STB  = $(RPC_SVC_C:.c=.o)
-OBJ_XDR      = $(RPC_XDR_C:.c=.o)
-
-# ---------- metas --------------------
+# --- reglas -------------------------------------------------
 .PHONY: all clean
 all: clienteEj servidorEj
 
-# 1) Stubs RPC (se recrean sólo si cambia rpc.x)
-$(RPC_H) $(RPC_CLNT_C) $(RPC_SVC_C) $(RPC_XDR_C): $(RPC_X)
-	@echo "[rpcgen] Generando stubs…"
-	$(RPCGEN) -h     -o $(RPC_H)      $<
-	$(RPCGEN) -l     -o $(RPC_CLNT_C) $<
-	$(RPCGEN) -s tcp -o $(RPC_SVC_C)  $<
-	$(RPCGEN) -c     -o $(RPC_XDR_C)  $<
+$(RPC_H) $(RPC_CLNT) $(RPC_SVC) $(RPC_XDR): $(RPC_X)
+	$(RPCGEN) -h -o $(RPC_H) $<
+	$(RPCGEN) -l -o $(RPC_CLNT) $<
+	$(RPCGEN) -m -o $(RPC_SVC)  $<
+	$(RPCGEN) -c -o $(RPC_XDR)  $<
 
-# 2) Regla genérica de compilación C → objeto
-%.o: %.c $(RPC_H)
-	$(CC) $(CFLAGS) -c $< -o $@
+proxy-rpc.o: proxy-rpc.c $(RPC_H)
+	$(CC) $(CFLAGS) -c $<
 
-# 3) Biblioteca compartida – lado cliente
-libclaves.so: $(OBJ_PROXY) $(OBJ_CLNT_STB) $(OBJ_XDR)
+rpc_clnt.o: $(RPC_CLNT) $(RPC_H)
+	$(CC) $(CFLAGS) -c $<
+
+rpc_xdr.o: $(RPC_XDR) $(RPC_H)
+	$(CC) $(CFLAGS) -c $<
+
+libclaves.so: proxy-rpc.o rpc_clnt.o rpc_xdr.o
 	$(CC) -shared -o $@ $^ $(LDFLAGS)
 
-# 4) Ejecutable cliente
-clienteEj: libclaves.so $(OBJ_CLIENTE)
-	$(CC) -o $@ $(OBJ_CLIENTE) -L. -lclaves -Wl,-rpath,. $(LDFLAGS)
+cliente/app-cliente.o: $(CLIENT_DIR)/app-cliente.c $(RPC_H)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# 5) Ejecutable servidor
-servidorEj: $(OBJ_SERVER) $(OBJ_SVC_STB) $(OBJ_XDR)
+clienteEj: cliente/app-cliente.o libclaves.so
+	$(CC) -o $@ $< -L. -lclaves $(LDFLAGS)
+
+servidor/servidor-rpc.o: $(SERVER_DIR)/servidor-rpc.c $(RPC_H)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+servidor/claves.o: $(SERVER_DIR)/claves.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+rpc_svc.o: $(RPC_SVC) $(RPC_H)
+	$(CC) $(CFLAGS) -c $<
+
+servidorEj: servidor/servidor-rpc.o servidor/claves.o rpc_svc.o rpc_xdr.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-# 6) Limpieza
 clean:
-	rm -f $(CLIENT_DIR)/*.o $(SERVER_DIR)/*.o *.o \
-	      rpc_*.* $(RPC_H) \
-	      clienteEj servidorEj libclaves.so
+	rm -f cliente/*.o servidor/*.o *.o \
+	      $(RPC_H) $(RPC_CLNT) $(RPC_SVC) $(RPC_XDR) \
+	      libclaves.so clienteEj servidorEj

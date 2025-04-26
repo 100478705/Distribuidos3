@@ -1,93 +1,100 @@
-/* servidor-rpc.c  —  servidor que envuelve claves.c  */
-#include "rpc.h"            /* stubs generados por rpcgen */
-#include "../claves.h"      /* implementación de la lista */
-#include <string.h>         /* memcpy, strncpy           >
-#include <stdlib.h>         /* malloc                     */
+/* servidor-rpc.c  –  servidor ONC-RPC para CLAVES_PROG (arrays estáticos) */
 
-/* ---------- SET_VALUE ------------------------------------ */
+#include <rpc/rpc.h>
+#include <string.h>
+#include <stdlib.h>
+#include "rpc.h"     /* generado por rpcgen */
+#include "claves.h"  /* API interna */
+
+extern void claves_prog_1(struct svc_req *, SVCXPRT *);
+
+/* --------- SET_VALUE --------- */
 bool_t
-set_value_1_svc(tupla *argp, int *result, struct svc_req *rq)
+set_value_1_svc(tupla *arg, int *res, struct svc_req *rq)
 {
-	struct Coord c = { argp->value3.x, argp->value3.y };
-	printf("Llega a set_value_1_svc\n");
-	*result = set_value(argp->key,
-	                    argp->value1,
-	                    argp->N_value2,
-	                    argp->V_value2.V_value2_val,
-	                    c);
-	return TRUE;   /* la llamada RPC en sí fue correcta      */
+    struct Coord c = { arg->value3.x, arg->value3.y };
+    *res = set_value(arg->key, arg->value1,
+                     arg->N_value2, arg->V_value2, c);
+    return TRUE;
 }
 
-/* ---------- MODIFY_VALUE ---------------------------------- */
+/* --------- MODIFY_VALUE ------ */
 bool_t
-modify_value_1_svc(tupla *argp, int *result, struct svc_req *rq)
+modify_value_1_svc(tupla *arg, int *res, struct svc_req *rq)
 {
-	struct Coord c = { argp->value3.x, argp->value3.y };
-
-	*result = modify_value(argp->key,
-	                       argp->value1,
-	                       argp->N_value2,
-	                       argp->V_value2.V_value2_val,
-	                       c);
-	return TRUE;
+    struct Coord c = { arg->value3.x, arg->value3.y };
+    *res = modify_value(arg->key, arg->value1,
+                        arg->N_value2, arg->V_value2, c);
+    return TRUE;
 }
 
-/* ---------- DELETE_KEY ------------------------------------ */
+/* --------- DELETE_KEY -------- */
 bool_t
-delete_key_1_svc(int *key, int *result, struct svc_req *rq)
+delete_key_1_svc(int *key, int *res, struct svc_req *rq)
 {
-	*result = delete_key(*key);
-	return TRUE;
+    *res = delete_key(*key);
+    return TRUE;
 }
 
-/* ---------- EXIST ----------------------------------------- */
+/* --------- EXIST ------------- */
 bool_t
-exist_1_svc(int *key, int *result, struct svc_req *rq)
+exist_1_svc(int *key, int *res, struct svc_req *rq)
 {
-	*result = exist(*key);     /* 0 = existe, -1 = error     */
-	return TRUE;
+    *res = exist(*key);
+    return TRUE;
 }
 
-/* ---------- GET_VALUE ------------------------------------- */
+/* --------- GET_VALUE --------- */
 bool_t
 get_value_1_svc(int *key, get_resp *resp, struct svc_req *rq)
 {
-	/* reservar espacio para el vector de salida              */
-	static double tmpVec[MAX_V2];      /* vida global, segura p/ RPC MT */
+    char tmp1[256];
+    double tmpV[MAX_V2];
+    int tmpN;
+    struct Coord tmpC;
 
-	resp->data.V_value2.V_value2_val = tmpVec;
+    resp->status = get_value(*key, tmp1, &tmpN, tmpV, &tmpC);
 
-	resp->status = get_value(*key,
-	                         resp->data.value1,
-	                         &resp->data.N_value2,
-	                         tmpVec,
-	                         (struct Coord *)&resp->data.value3);  /* same layout */
-
-	if (resp->status == 0) {
-		resp->data.key = *key;
-		resp->data.V_value2.V_value2_len = resp->data.N_value2;
-	}
-	return TRUE;
+    if (resp->status == 0) {
+        resp->data.key = *key;
+        strncpy(resp->data.value1, tmp1, sizeof(resp->data.value1)-1);
+        resp->data.value1[sizeof(resp->data.value1)-1] = '\0';
+        resp->data.N_value2 = tmpN;
+        memcpy(resp->data.V_value2, tmpV, sizeof(double)*tmpN);
+        resp->data.value3.x = tmpC.x;
+        resp->data.value3.y = tmpC.y;
+    }
+    return TRUE;
 }
 
-/* ---------- DESTROY --------------------------------------- */
+/* --------- DESTROY ----------- */
 bool_t
-destroy_1_svc(void *dummy, int *result, struct svc_req *rq)
+destroy_1_svc(void *dummy, int *res, struct svc_req *rq)
 {
-	*result = destroy();
-	return TRUE;
+    *res = destroy();
+    return TRUE;
 }
 
+/* --------- free result ------- */
 bool_t
-claves_prog_1_freeresult (SVCXPRT *transp, xdrproc_t xdr_result, caddr_t result)
+claves_prog_1_freeresult(SVCXPRT *t, xdrproc_t xdr_res, caddr_t res)
 {
-	/* La mayoría de nuestras operaciones devuelven un int, cuyo
-	   XDR no aloja memoria dinámica.  Sólo GET_VALUE devuelve
-	   una estructura con un vector → usamos xdr_free()           */
-	if (result != NULL && xdr_result != NULL)
-		xdr_free(xdr_result, result);
+    if (res && xdr_res) xdr_free(xdr_res, res);
+    (void)t;
+    return TRUE;
+}
 
-	/* ‘transp’ no se usa, pero lo dejamos para cumplir el proto. */
-	(void) transp;
-	return TRUE;          /* siempre OK */
+int
+main(void)
+{
+    pmap_unset(CLAVES_PROG, CLAVES_VERS);
+
+    SVCXPRT *tcp = svctcp_create(RPC_ANYSOCK, 0, 0);
+    svc_register(tcp, CLAVES_PROG, CLAVES_VERS, claves_prog_1, IPPROTO_TCP);
+
+    SVCXPRT *udp = svcudp_create(RPC_ANYSOCK);
+    svc_register(udp, CLAVES_PROG, CLAVES_VERS, claves_prog_1, IPPROTO_UDP);
+
+    svc_run();
+    return 1;
 }
