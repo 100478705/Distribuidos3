@@ -83,7 +83,8 @@ int get_value(int key, char *v1, int *N, double *v2, struct Coord *c)
     if (get_value_1(&key, &resp, cl) == RPC_SUCCESS) {
         st = resp.status;
         if (st == 0) {
-            strncpy(v1, resp.data.value1, sizeof(resp.data.value1));
+            strncpy(v1, resp.data.value1, sizeof(v1) - 1);
+            v1[sizeof(v1) - 1] = '\0';    
             *N = resp.data.N_value2;
             memcpy(v2, resp.data.V_value2, sizeof(double)*(*N));
             c->x = resp.data.value3.x;
