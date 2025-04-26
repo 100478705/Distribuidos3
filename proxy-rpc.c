@@ -1,13 +1,10 @@
-/* proxy-rpc.c  – wrappers cliente para CLAVES_PROG
- * NO contiene main ni handlers *_svc
- */
+
 #include <rpc/rpc.h>
 #include <string.h>
 #include <stdlib.h>
 #include "rpc.h"
 #include "claves.h"
 
-/* ---------- helper para obtener el handle RPC ---------- */
 static CLIENT *get_handle(void)
 {
     char *ip = getenv("IP_TUPLAS");
@@ -17,7 +14,6 @@ static CLIENT *get_handle(void)
     return cl;
 }
 
-/* ---------- SET_VALUE ----------------------------------- */
 int set_value(int key, char *v1, int N, double *v2, struct Coord c)
 {
     CLIENT *cl = get_handle();
@@ -37,7 +33,6 @@ int set_value(int key, char *v1, int N, double *v2, struct Coord c)
     return res;
 }
 
-/* ---------- MODIFY_VALUE -------------------------------- */
 int modify_value(int key, char *v1, int N, double *v2, struct Coord c)
 {
     CLIENT *cl = get_handle();
@@ -57,7 +52,6 @@ int modify_value(int key, char *v1, int N, double *v2, struct Coord c)
     return res;
 }
 
-/* ---------- DELETE_KEY ---------------------------------- */
 int delete_key(int key)
 {
     CLIENT *cl = get_handle();
@@ -68,7 +62,6 @@ int delete_key(int key)
     return res;
 }
 
-/* ---------- EXIST --------------------------------------- */
 int exist(int key)
 {
     CLIENT *cl = get_handle();
@@ -79,7 +72,6 @@ int exist(int key)
     return res;
 }
 
-/* ---------- GET_VALUE ----------------------------------- */
 int get_value(int key, char *v1, int *N, double *v2, struct Coord *c)
 {
     CLIENT *cl = get_handle();
@@ -102,7 +94,6 @@ int get_value(int key, char *v1, int *N, double *v2, struct Coord *c)
     return st;
 }
 
-/* ---------- DESTROY ------------------------------------- */
 int destroy(void)
 {
     CLIENT *cl = get_handle();

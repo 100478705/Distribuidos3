@@ -1,14 +1,12 @@
-/* servidor-rpc.c  –  servidor ONC-RPC para CLAVES_PROG (arrays estáticos) */
 
 #include <rpc/rpc.h>
 #include <string.h>
 #include <stdlib.h>
-#include "rpc.h"     /* generado por rpcgen */
-#include "claves.h"  /* API interna */
+#include "rpc.h"     
+#include "claves.h"  
 
 extern void claves_prog_1(struct svc_req *, SVCXPRT *);
 
-/* --------- SET_VALUE --------- */
 bool_t
 set_value_1_svc(tupla *arg, int *res, struct svc_req *rq)
 {
@@ -18,7 +16,6 @@ set_value_1_svc(tupla *arg, int *res, struct svc_req *rq)
     return TRUE;
 }
 
-/* --------- MODIFY_VALUE ------ */
 bool_t
 modify_value_1_svc(tupla *arg, int *res, struct svc_req *rq)
 {
@@ -28,7 +25,6 @@ modify_value_1_svc(tupla *arg, int *res, struct svc_req *rq)
     return TRUE;
 }
 
-/* --------- DELETE_KEY -------- */
 bool_t
 delete_key_1_svc(int *key, int *res, struct svc_req *rq)
 {
@@ -36,7 +32,6 @@ delete_key_1_svc(int *key, int *res, struct svc_req *rq)
     return TRUE;
 }
 
-/* --------- EXIST ------------- */
 bool_t
 exist_1_svc(int *key, int *res, struct svc_req *rq)
 {
@@ -44,7 +39,6 @@ exist_1_svc(int *key, int *res, struct svc_req *rq)
     return TRUE;
 }
 
-/* --------- GET_VALUE --------- */
 bool_t
 get_value_1_svc(int *key, get_resp *resp, struct svc_req *rq)
 {
@@ -67,7 +61,6 @@ get_value_1_svc(int *key, get_resp *resp, struct svc_req *rq)
     return TRUE;
 }
 
-/* --------- DESTROY ----------- */
 bool_t
 destroy_1_svc(void *dummy, int *res, struct svc_req *rq)
 {
@@ -75,7 +68,6 @@ destroy_1_svc(void *dummy, int *res, struct svc_req *rq)
     return TRUE;
 }
 
-/* --------- free result ------- */
 bool_t
 claves_prog_1_freeresult(SVCXPRT *t, xdrproc_t xdr_res, caddr_t res)
 {
