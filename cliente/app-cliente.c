@@ -4,12 +4,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdbool.h>
+bool noComprobado = false;
 
 bool mostrarMenu() {
-    if(destroy() == -2){
-        printf("No hay conexión con el servidor.\n");
-        return false;
-    }
     printf("\033[1;34m===========================================\033[0m\n");
     printf("\033[1;34m             MENU PRINCIPAL              \033[0m\n");
     printf("\033[1;34m===========================================\033[0m\n");
