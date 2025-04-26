@@ -3,7 +3,7 @@
  * It was generated using rpcgen.
  */
 
-#include "claves.h"
+#include "rpc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <rpc/pmap_clnt.h>
@@ -20,55 +20,63 @@ static void
 claves_prog_1(struct svc_req *rqstp, register SVCXPRT *transp)
 {
 	union {
-		set_args rpc_set_value_1_arg;
-		get_args rpc_get_value_1_arg;
-		delete_args rpc_delete_key_1_arg;
-		set_args rpc_modify_value_1_arg;
-		exist_args rpc_exist_1_arg;
+		tupla set_value_1_arg;
+		tupla modify_value_1_arg;
+		int delete_key_1_arg;
+		int exist_1_arg;
+		int get_value_1_arg;
 	} argument;
-	char *result;
+	union {
+		int set_value_1_res;
+		int modify_value_1_res;
+		int delete_key_1_res;
+		int exist_1_res;
+		get_resp get_value_1_res;
+		int destroy_1_res;
+	} result;
+	bool_t retval;
 	xdrproc_t _xdr_argument, _xdr_result;
-	char *(*local)(char *, struct svc_req *);
+	bool_t (*local)(char *, void *, struct svc_req *);
 
 	switch (rqstp->rq_proc) {
 	case NULLPROC:
 		(void) svc_sendreply (transp, (xdrproc_t) xdr_void, (char *)NULL);
 		return;
 
-	case rpc_set_value:
-		_xdr_argument = (xdrproc_t) xdr_set_args;
+	case SET_VALUE:
+		_xdr_argument = (xdrproc_t) xdr_tupla;
 		_xdr_result = (xdrproc_t) xdr_int;
-		local = (char *(*)(char *, struct svc_req *)) rpc_set_value_1_svc;
+		local = (bool_t (*) (char *, void *,  struct svc_req *))set_value_1_svc;
 		break;
 
-	case rpc_get_value:
-		_xdr_argument = (xdrproc_t) xdr_get_args;
-		_xdr_result = (xdrproc_t) xdr_set_args;
-		local = (char *(*)(char *, struct svc_req *)) rpc_get_value_1_svc;
-		break;
-
-	case rpc_delete_key:
-		_xdr_argument = (xdrproc_t) xdr_delete_args;
+	case MODIFY_VALUE:
+		_xdr_argument = (xdrproc_t) xdr_tupla;
 		_xdr_result = (xdrproc_t) xdr_int;
-		local = (char *(*)(char *, struct svc_req *)) rpc_delete_key_1_svc;
+		local = (bool_t (*) (char *, void *,  struct svc_req *))modify_value_1_svc;
 		break;
 
-	case rpc_modify_value:
-		_xdr_argument = (xdrproc_t) xdr_set_args;
+	case DELETE_KEY:
+		_xdr_argument = (xdrproc_t) xdr_int;
 		_xdr_result = (xdrproc_t) xdr_int;
-		local = (char *(*)(char *, struct svc_req *)) rpc_modify_value_1_svc;
+		local = (bool_t (*) (char *, void *,  struct svc_req *))delete_key_1_svc;
 		break;
 
-	case rpc_exist:
-		_xdr_argument = (xdrproc_t) xdr_exist_args;
+	case EXIST:
+		_xdr_argument = (xdrproc_t) xdr_int;
 		_xdr_result = (xdrproc_t) xdr_int;
-		local = (char *(*)(char *, struct svc_req *)) rpc_exist_1_svc;
+		local = (bool_t (*) (char *, void *,  struct svc_req *))exist_1_svc;
 		break;
 
-	case rpc_destroy:
+	case GET_VALUE:
+		_xdr_argument = (xdrproc_t) xdr_int;
+		_xdr_result = (xdrproc_t) xdr_get_resp;
+		local = (bool_t (*) (char *, void *,  struct svc_req *))get_value_1_svc;
+		break;
+
+	case DESTROY:
 		_xdr_argument = (xdrproc_t) xdr_void;
 		_xdr_result = (xdrproc_t) xdr_int;
-		local = (char *(*)(char *, struct svc_req *)) rpc_destroy_1_svc;
+		local = (bool_t (*) (char *, void *,  struct svc_req *))destroy_1_svc;
 		break;
 
 	default:
@@ -80,14 +88,17 @@ claves_prog_1(struct svc_req *rqstp, register SVCXPRT *transp)
 		svcerr_decode (transp);
 		return;
 	}
-	result = (*local)((char *)&argument, rqstp);
-	if (result != NULL && !svc_sendreply(transp, (xdrproc_t) _xdr_result, result)) {
+	retval = (bool_t) (*local)((char *)&argument, (void *)&result, rqstp);
+	if (retval > 0 && !svc_sendreply(transp, (xdrproc_t) _xdr_result, (char *)&result)) {
 		svcerr_systemerr (transp);
 	}
 	if (!svc_freeargs (transp, (xdrproc_t) _xdr_argument, (caddr_t) &argument)) {
 		fprintf (stderr, "%s", "unable to free arguments");
 		exit (1);
 	}
+	if (!claves_prog_1_freeresult (transp, _xdr_result, (caddr_t) &result))
+		fprintf (stderr, "%s", "unable to free results");
+
 	return;
 }
 
@@ -97,16 +108,6 @@ main (int argc, char **argv)
 	register SVCXPRT *transp;
 
 	pmap_unset (CLAVES_PROG, CLAVES_VERS);
-
-	transp = svcudp_create(RPC_ANYSOCK);
-	if (transp == NULL) {
-		fprintf (stderr, "%s", "cannot create udp service.");
-		exit(1);
-	}
-	if (!svc_register(transp, CLAVES_PROG, CLAVES_VERS, claves_prog_1, IPPROTO_UDP)) {
-		fprintf (stderr, "%s", "unable to register (CLAVES_PROG, CLAVES_VERS, udp).");
-		exit(1);
-	}
 
 	transp = svctcp_create(RPC_ANYSOCK, 0, 0);
 	if (transp == NULL) {

@@ -1,70 +1,93 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <rpc/rpc.h>
-#include <pthread.h>
-#include <signal.h>
-#include <unistd.h>
-#include "../claves.h"  // Asegúrate de incluir el header generado
+/* servidor-rpc.c  —  servidor que envuelve claves.c  */
+#include "rpc.h"            /* stubs generados por rpcgen */
+#include "../claves.h"      /* implementación de la lista */
+#include <string.h>         /* memcpy, strncpy           >
+#include <stdlib.h>         /* malloc                     */
 
-/* Añade esta declaración externa */
-extern void claves_prog_1(struct svc_req *rqstp, SVCXPRT *transp);
+/* ---------- SET_VALUE ------------------------------------ */
+bool_t
+set_value_1_svc(tupla *argp, int *result, struct svc_req *rq)
+{
+	struct Coord c = { argp->value3.x, argp->value3.y };
 
-/* Variables globales para control del servidor */
-static int server_running = 1;
-static SVCXPRT *transp_tcp = NULL;
-
-/* Handler para señales (ej. Ctrl+C) */
-void handle_signal(int sig) {
-    if (sig == SIGINT) {
-        printf("\nDeteniendo servidor...\n");
-        server_running = 0;
-        if (transp_tcp) {
-            svc_unregister(CLAVES_PROG, CLAVES_VERS);
-            svc_destroy(transp_tcp);
-        }
-        exit(0);
-    }
+	*result = set_value(argp->key,
+	                    argp->value1,
+	                    argp->N_value2,
+	                    argp->V_value2.V_value2_val,
+	                    c);
+	return TRUE;   /* la llamada RPC en sí fue correcta      */
 }
 
-/* Función que ejecuta cada hilo para atender peticiones */
-void* server_thread(void *arg) {
-    (void)arg;  // Elimina el warning de variable no usada
-    svc_run();  // Bloqueante hasta que haya peticiones
-    return NULL;
+/* ---------- MODIFY_VALUE ---------------------------------- */
+bool_t
+modify_value_1_svc(tupla *argp, int *result, struct svc_req *rq)
+{
+	struct Coord c = { argp->value3.x, argp->value3.y };
+
+	*result = modify_value(argp->key,
+	                       argp->value1,
+	                       argp->N_value2,
+	                       argp->V_value2.V_value2_val,
+	                       c);
+	return TRUE;
 }
 
-int main() {
-    /* Configurar handler para Ctrl+C */
-    signal(SIGINT, handle_signal);
+/* ---------- DELETE_KEY ------------------------------------ */
+bool_t
+delete_key_1_svc(int *key, int *result, struct svc_req *rq)
+{
+	*result = delete_key(*key);
+	return TRUE;
+}
 
-    /* Registrar el servicio RPC sobre TCP */
-    transp_tcp = svctcp_create(RPC_ANYSOCK, 0, 0);
-    if (!transp_tcp) {
-        fprintf(stderr, "Error: No se pudo crear el servidor TCP\n");
-        exit(EXIT_FAILURE);
-    }
+/* ---------- EXIST ----------------------------------------- */
+bool_t
+exist_1_svc(int *key, int *result, struct svc_req *rq)
+{
+	*result = exist(*key);     /* 0 = existe, -1 = error     */
+	return TRUE;
+}
 
-    if (!svc_register(transp_tcp, CLAVES_PROG, CLAVES_VERS, claves_prog_1, IPPROTO_TCP)) {
-        fprintf(stderr, "Error: No se pudo registrar el servicio\n");
-        exit(EXIT_FAILURE);
-    }
+/* ---------- GET_VALUE ------------------------------------- */
+bool_t
+get_value_1_svc(int *key, get_resp *resp, struct svc_req *rq)
+{
+	/* reservar espacio para el vector de salida              */
+	static double tmpVec[MAX_V2];      /* vida global, segura p/ RPC MT */
 
-    printf("Servidor RPC iniciado (Programa: 0x%08x, Versión: %d)\n", CLAVES_PROG, CLAVES_VERS);
-    printf("Usa rpcinfo -p para verificar el registro\n");
+	resp->data.V_value2.V_value2_val = tmpVec;
 
-    /* Crear pool de hilos para manejar conexiones concurrentes */
-    pthread_t threads[10];
-    for (int i = 0; i < 10; i++) {
-        if (pthread_create(&threads[i], NULL, server_thread, (void *)transp_tcp) != 0) {
-            perror("Error al crear hilo");
-            exit(EXIT_FAILURE);
-        }
-    }
+	resp->status = get_value(*key,
+	                         resp->data.value1,
+	                         &resp->data.N_value2,
+	                         tmpVec,
+	                         (struct Coord *)&resp->data.value3);  /* same layout */
 
-    /* Esperar a que todos los hilos terminen */
-    for (int i = 0; i < 10; i++) {
-        pthread_join(threads[i], NULL);
-    }
+	if (resp->status == 0) {
+		resp->data.key = *key;
+		resp->data.V_value2.V_value2_len = resp->data.N_value2;
+	}
+	return TRUE;
+}
 
-    return 0;
+/* ---------- DESTROY --------------------------------------- */
+bool_t
+destroy_1_svc(void *dummy, int *result, struct svc_req *rq)
+{
+	*result = destroy();
+	return TRUE;
+}
+
+bool_t
+claves_prog_1_freeresult (SVCXPRT *transp, xdrproc_t xdr_result, caddr_t result)
+{
+	/* La mayoría de nuestras operaciones devuelven un int, cuyo
+	   XDR no aloja memoria dinámica.  Sólo GET_VALUE devuelve
+	   una estructura con un vector → usamos xdr_free()           */
+	if (result != NULL && xdr_result != NULL)
+		xdr_free(xdr_result, result);
+
+	/* ‘transp’ no se usa, pero lo dejamos para cumplir el proto. */
+	(void) transp;
+	return TRUE;          /* siempre OK */
 }
