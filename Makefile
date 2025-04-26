@@ -28,8 +28,8 @@ proxy-rpc.o: proxy-rpc.c $(RPC_H)
 rpc_clnt.o: $(RPC_CLNT) $(RPC_H)
 	$(CC) $(CFLAGS) -c $<
 
-rpc_xdr.o: $(RPC_XDR) $(RPC_H)
-	$(CC) $(CFLAGS) -c $<
+rpc_xdr.o: rpc_xdr.c $(RPC_H)
+	$(CC) $(CFLAGS) -Wno-unused-variable -c $< -o $@
 
 libclaves.so: proxy-rpc.o rpc_clnt.o rpc_xdr.o
 	$(CC) -shared -o $@ $^ $(LDFLAGS)
