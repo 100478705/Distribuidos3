@@ -108,7 +108,14 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     if (buscarNodo(cabeza, key) != NULL) {
         return -1;
     }
-
+	printf("Valores de value1: %s\n", value1);
+	printf("Valores de N_value2: %d\n", N_value2);
+	printf("Valores de V_value2: ");
+	for (int i = 0; i < N_value2; i++) {
+		printf("%f ", V_value2[i]);
+	}
+	printf("\n");
+	printf("Valores de value3 (x,y): %d %d\n", value3.x, value3.y);
     pthread_mutex_lock(&mutex);  //Bloqueo para proteger la inserción
     Nodo* nodo = crearNodo(key, value1, N_value2, V_value2, value3);
     insertarAlInicio(&cabeza, nodo);

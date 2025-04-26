@@ -9,7 +9,7 @@ bool_t
 set_value_1_svc(tupla *argp, int *result, struct svc_req *rq)
 {
 	struct Coord c = { argp->value3.x, argp->value3.y };
-
+	printf("Llega a set_value_1_svc\n");
 	*result = set_value(argp->key,
 	                    argp->value1,
 	                    argp->N_value2,

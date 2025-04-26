@@ -24,7 +24,7 @@ int set_value(int key, char *value1, int N,
 {
     CLIENT *cl = get_handle();
     if (!cl) return -2;             /* sin conexión */
-
+	printf("Llega a set_value\n");
     /* montar la tupla con la codificación XDR real */
     tupla t;
     t.key           = key;
