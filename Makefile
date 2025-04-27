@@ -38,7 +38,7 @@ cliente/app-cliente.o: $(CLIENT_DIR)/app-cliente.c $(RPC_H)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clienteEj: cliente/app-cliente.o libclaves.so
-	$(CC) -o $@ $< -L. -lclaves $(LDFLAGS)
+	$(CC) -o $@ $< -L. -lclaves -Wl,-rpath,'$$ORIGIN' $(LDFLAGS)
 
 servidor/servidor-rpc.o: $(SERVER_DIR)/servidor-rpc.c $(RPC_H)
 	$(CC) $(CFLAGS) -c $< -o $@
