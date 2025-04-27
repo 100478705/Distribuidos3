@@ -4,9 +4,15 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
+
 bool noComprobado = false;
 
 bool mostrarMenu() {
+	if(exist(INT_MAX) == -2){
+		printf("No existe conexión con el servidor\n");
+		return false;
+	}
     printf("\033[1;34m===========================================\033[0m\n");
     printf("\033[1;34m             MENU PRINCIPAL              \033[0m\n");
     printf("\033[1;34m===========================================\033[0m\n");

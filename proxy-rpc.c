@@ -4,7 +4,13 @@
 #include <stdlib.h>
 #include "rpc.h"
 #include "claves.h"
+#include <stdbool.h>
+#include <limits.h>
 
+
+
+
+bool primeraLlamada = false;
 static CLIENT *get_handle(void)
 {
     char *ip = getenv("IP_TUPLAS");
@@ -67,8 +73,17 @@ int exist(int key)
     CLIENT *cl = get_handle();
     if (!cl) return -2;
     int res = -1;
-    if (exist_1(&key, &res, cl) != RPC_SUCCESS) res = -1;
-    clnt_destroy(cl);
+	if(primeraLlamada == false){
+		primeraLlamada = true;
+		if (exist_1(&key, &res, cl) != RPC_SUCCESS)
+		{
+			return -2;
+		} 
+	}
+	if(primeraLlamada == true && key != INT_MAX){ 
+		if (exist_1(&key, &res, cl) != RPC_SUCCESS) res = -1;
+		clnt_destroy(cl);
+	}
     return res;
 }
 
